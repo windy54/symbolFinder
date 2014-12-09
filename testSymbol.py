@@ -135,7 +135,8 @@ if connected >= wiiMaxAttempts:
   print "failed to connect - use keyboard", connected
   wiiConnected = False
   
-
+if wiiConnected:
+   wii.led = 15 # all leds on
 ###########################################################
 
 
@@ -144,6 +145,12 @@ robot = legoRobotClass.myThread(1, "Thread-1", 1)
 
 robot.setDaemon(True)
 robot.start() 
+
+# open file for debug
+debugFile = open('robotdebug.txt','w')
+debugFile.write('here we go \n')
+
+wii.led = 0
 
 letsRun = True
 lastsymCommand = "-"
@@ -158,15 +165,33 @@ try:
           Command = wiiControl.getCommand(wii)
     else:
           Command = raw_input("F=Forward\nB=Backward\nL=Left\nR=Right\nS=Stop\nX=Shutdown PI\n1=Follow\n2=quit program\n")
-
-    if Command == "F":
+    # process command
+    debugFile.write(symCommand+" "+str(error)+" "+Command+"\n")
+    if Command == "1":
+       # auto mode selected
+       if symCommand == "F":
+          robot.moveForwards()
+          wii.led = 5
+       elif symCommand == "L":
+          robot.turn(-90)
+          wii.led = 3
+       elif symCommand == "R":
+          robot.turn(+90)
+          wii.led = 9
+       else:
+          robot.stopMoving()
+          wii.led = 0
+    elif Command == "F":
          robot.moveForwards()
+         wii.led = 2
     elif Command == "B":
          robot.moveBackwards()
     elif Command == "L":
          robot.turnLeft()
+         wii.led = 4
     elif Command == "R":
          robot.turnRight()
+         wii.led = 8
     elif Command =="A" and lastCommand != "A":
          #add debounce by making sure command is changed
          robot.accelerate()
@@ -177,9 +202,11 @@ try:
          wiiControl.rumbleWii(wii)
     else:
          robot.stopMoving()
+         wii.led = 0
 
 except KeyboardInterrupt:
   print("Keyboard interrupt")
+  debugFile.close()
   shutdown()    
 
 except Exception as e:
@@ -187,10 +214,12 @@ except Exception as e:
   exc_type, exc_obj, exc_tb = sys.exc_info()
   fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
   print(exc_type, fname, exc_tb.tb_lineno)
+  debugFile.close()
   shutdown()
 
 finally:
   print "FINALLY"
+  debugFile.close()
   robot.running = False
   shutdown()
   if Command =="X":
